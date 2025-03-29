@@ -4,11 +4,25 @@
 #include <string>
 #include "Roboto.h"
 #define GFXFF 1
+using fs::FS;
+#include <WiFi.h>
+#include <WebServer.h>
+
+const char* ssid = "Patchogochi";  // Enter SSID here
+const char* password = "12345678";  //Enter Password here
+
+IPAddress local_ip(192,168,1,1);
+IPAddress gateway(192,168,1,1);
+IPAddress subnet(255,255,255,0);
+
+WebServer server(80);
 
 TFT_eSPI tft = TFT_eSPI();
 
 int positionx = 1;
 bool xrev = false;
+
+int state = 1;
 
 int positiony = 1;
 bool yrev = false;
@@ -24,24 +38,69 @@ uint16_t currentcolor = rgb565(252,186,3);
 
 void setup() {
   tft.init();
-  tft.setRotation(3);
-  tft.setTextSize(1);
   Serial.begin(115200);
-  tft.fillScreen(TFT_BLACK);
-  tft.setTextColor(rgb565(252,186,3));
-  tft.setFreeFont(&Roboto_25);
-  tft.drawString("mrepp miaow :3", 5, 5, GFXFF); 
-  tft.setFreeFont(&Roboto_15);
-  tft.drawString("beep beep, faggot alert.", 5, 35, GFXFF); 
-  tft.drawString("running dvd screen demo in 5s!", 5, 65, GFXFF); 
-  tft.drawXBitmap(240, 172, logo, logoWidth, logoHeight, TFT_BLACK, rgb565(252,186,3));
+    tft.fillScreen(TFT_BLACK);
+    tft.setRotation(3);
+    tft.setTextSize(1);
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(rgb565(252,186,3));
+    tft.setFreeFont(&Roboto_25);
+    tft.drawString("mrepp miaow :3", 5, 5, GFXFF); 
+    tft.setFreeFont(&Roboto_15);
+    tft.drawString("beep beep, faggot alert.", 5, 35, GFXFF); 
+    tft.drawXBitmap(240, 172, logo, logoWidth, logoHeight, TFT_BLACK, rgb565(252,186,3));
+  WiFi.softAP(ssid, password);
+  WiFi.softAPConfig(local_ip, gateway, subnet);
+  delay(100);
+  server.on("/", handle_OnConnect);
+  server.on("/screennone", setNoneScreen);
+  server.on("/screentv", setTVScreen);
+  server.onNotFound(handle_OnConnect);
+  server.begin();
   delay(5000);
-  tft.fillScreen(TFT_BLACK);
   randomSeed(analogRead(0));
 }
 
-void loop() {
+void setNoneScreen() {
+  if(state != 1) {
+    tft.fillScreen(TFT_BLACK);
+    tft.setRotation(3);
+    tft.setTextSize(1);
+    tft.fillScreen(TFT_BLACK);
+    tft.setTextColor(rgb565(252,186,3));
+    tft.setFreeFont(&Roboto_25);
+    tft.drawString("mrepp miaow :3", 5, 5, GFXFF); 
+    tft.setFreeFont(&Roboto_15);
+    tft.drawString("beep beep, faggot alert.", 5, 35, GFXFF); 
+    tft.drawXBitmap(240, 172, logo, logoWidth, logoHeight, TFT_BLACK, rgb565(252,186,3));
+    delay(100);
+    state = 1;
+  }
+}
 
+void setTVScreen() {
+  if(state != 2) {
+    tft.fillScreen(TFT_BLACK);
+    state = 2;
+  }
+}
+
+void handle_OnConnect() {\
+  server.send(200, "text/html", "<h1>select the screen of choice!</h1> <br> <a href=\"/screennone\">no screen</a> <br> <a href=\"/screentv\">dvd screen</a> "); 
+}
+
+void loop() {
+  server.handleClient();
+
+  stateHandler();
+}
+
+void stateHandler() {
+  switch(state) {
+    case 1:
+      break;
+    case 2:
+      
   // this code is janky as all fuck, i'm very much aware
   // but it does work, c is hard :(((
 
@@ -118,6 +177,6 @@ void loop() {
 
   // then draws the new sprite
   tft.drawXBitmap(positionx, positiony, logo, logoWidth, logoHeight, TFT_BLACK, currentcolor);
-
-
+  break;
+  }
 }
